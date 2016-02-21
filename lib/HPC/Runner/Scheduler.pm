@@ -889,6 +889,10 @@ it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
+L<HPC::Runner::Slurm>
+L<HPC::Runner::PBS>
+L<HPC::Runner::MCE>
+
 =cut
 
 __END__
