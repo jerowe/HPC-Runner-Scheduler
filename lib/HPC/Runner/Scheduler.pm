@@ -33,11 +33,17 @@ HPC::Runner::Scheduler - Base Library for HPC::Runner::Slurm and HPC::Runner::PB
 
 =head1 SYNOPSIS
 
-  use HPC::Runner::Scheduler;
+    pbsrunner.pl/slurmrunner.pl/mcerunner.pl --infile list_of_commands
 
 =head1 DESCRIPTION
 
-HPC::Runner::Scheduler is
+HPC::Runner::Scheduler is a base library for creating templates of HPC Scheduler (Slurm, PBS, etc) submission scripts.
+
+All the scheduler variables: memory, cpus, nodes, partitions/queues, are abstracted to a template. Instead of writing an entire submission template
+
+    slurmrunner.pl --infile list_of_commands #with list of optional parameters
+
+Please see the indepth usage guide at L<HPC::Runner::Usage>
 
 =cut
 
@@ -90,8 +96,6 @@ infile of commands separated by newline
     #cmd3 is a very heavy job so lets start the next job on a new node
 
 =cut
-
-#We already have infile in HPC::Runner, just wanted to include slurm specific documentation here
 
 =head2 module
 
