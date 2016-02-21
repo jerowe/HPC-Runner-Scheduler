@@ -221,5 +221,8 @@ Copyright 2016- Jillian Rowe
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-
 # SEE ALSO
+
+[HPC::Runner::Slurm](https://metacpan.org/pod/HPC::Runner::Slurm)
+[HPC::Runner::PBS](https://metacpan.org/pod/HPC::Runner::PBS)
+[HPC::Runner::MCE](https://metacpan.org/pod/HPC::Runner::MCE)
