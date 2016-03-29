@@ -46,6 +46,8 @@
             "IO::File" : "0",
             "IO::Select" : "0",
             "IPC::Open3" : "0",
+            "JSON" : "0",
+            "List::MoreUtils" : "0",
             "List::Util" : "0",
             "Log::Log4perl" : "0",
             "Moose" : "0",
@@ -75,6 +77,6 @@
          "web" : "https://github.com/jerowe/HPC-Runner-Scheduler"
       }
    },
-   "version" : "0.03"
+   "version" : "0.04"
 }
 

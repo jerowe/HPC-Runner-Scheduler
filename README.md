@@ -84,6 +84,10 @@ Bool value whether or not to submit to slurm. If you are looking to debug your f
 Don't submit to slurm with --nosubmit\_to\_slurm from the command line or
 $self->submit\_to\_slurm(0); within your code
 
+## first\_pass
+
+Do a first pass of the file to get all the stats
+
 ## template\_file
 
 actual template file
@@ -128,6 +132,7 @@ template object for writing slurm batch submission script
 ## cmd\_counter
 
 keep track of the number of commands - when we get to more than commands\_per\_node restart so we get submit to a new node.
+This is the number of commands within a batch. Each new batch resets it.
 
 ## node\_counter
 
@@ -158,12 +163,21 @@ File generated from slurm template
 
 Do not specify a node or partition in your sbatch file. Let Slurm decide which nodes/partition to submit jobs.
 
+## job\_stats
+
+HashRef of job stats - total jobs submitted, total processes, etc
+
 # SUBROUTINES/METHODS
 
 ## run()
 
 First sub called
 Calling system module load \* does not work within a screen session!
+
+## do\_stats
+
+Do some stats on our job stats
+Foreach job name get the number of batches, and have a put that in batches->batch->job\_batches
 
 ## check\_files()
 
@@ -198,6 +212,10 @@ Get the node #may be removed but we'll try it out
 Process the batch
 Submit to slurm
 Take care of the counters
+
+## collect\_stats
+
+Collect job stats
 
 ## process\_batch()
 
