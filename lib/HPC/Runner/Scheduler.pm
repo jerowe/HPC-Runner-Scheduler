@@ -11,8 +11,10 @@ use Template;
 use Log::Log4perl qw(:easy);
 use DateTime;
 use Data::Dumper;
-use List::Util qw/shuffle/;
-# use IPC::Cmd qw/can_run/;
+use List::Util qw(shuffle);
+use List::MoreUtils qw(firstidx);
+use JSON;
+
 
 use Moose;
 use namespace::autoclean;
@@ -20,10 +22,9 @@ extends 'HPC::Runner';
 with 'MooseX::SimpleConfig';
 
 # For pretty man pages!
-$ENV{TERM}='xterm-256color';
+$ENV{TERM} = 'xterm-256color';
 
 our $VERSION = '0.03';
-
 
 =encoding utf-8
 
@@ -69,7 +70,8 @@ This is optional. Paramaters can be passed straight to the command line
 
 has '+configfile' => (
     required => 0,
-    documentation => q{If you get tired of putting all your options on the command line create a config file instead.
+    documentation =>
+        q{If you get tired of putting all your options on the command line create a config file instead.
     ---
     infile: "/path/to/commands/testcommand.in"
     outdir: "path/to/testdir"
@@ -78,7 +80,6 @@ has '+configfile' => (
         - "shared"
     }
 );
-
 
 =head2 infile
 
@@ -107,13 +108,12 @@ Example. R2 becomes 'module load R2'
 =cut
 
 has 'module' => (
-    is => 'rw',
-    isa => 'ArrayRef',
-    required => 0,
+    is            => 'rw',
+    isa           => 'ArrayRef',
+    required      => 0,
     documentation => q{List of modules to load ex. R2, samtools, etc},
-    default => sub {[]},
+    default       => sub { [] },
 );
-
 
 =head2 afterok
 
@@ -122,14 +122,13 @@ The afterok switch in slurm. --afterok 123 will tell slurm to start this job aft
 =cut
 
 has afterok => (
-    is        => 'rw',
-    isa     => 'ArrayRef',
+    is       => 'rw',
+    isa      => 'ArrayRef',
     required => 0,
-    default => sub {
+    default  => sub {
         return [];
     },
 );
-
 
 =head2 cpus_per_task
 
@@ -138,12 +137,12 @@ slurm item --cpus_per_task defaults to 4, which is probably fine
 =cut
 
 has 'cpus_per_task' => (
-    is => 'rw',
-    isa => 'Str',
-    required => 0,
-    default => 4,
+    is        => 'rw',
+    isa       => 'Str',
+    required  => 0,
+    default   => 4,
     predicate => 'has_cpus_per_task',
-    clearer => 'clear_cpus_per_task'
+    clearer   => 'clear_cpus_per_task'
 );
 
 =head2 commands_per_node
@@ -153,13 +152,14 @@ has 'cpus_per_task' => (
 =cut
 
 has 'commands_per_node' => (
-    is => 'rw',
-    isa => 'Str',
+    is       => 'rw',
+    isa      => 'Str',
     required => 0,
-    default => 8,
-    documentation => q{Commands to run on each node. This is not the same as concurrent_commands_per_node!},
+    default  => 8,
+    documentation =>
+        q{Commands to run on each node. This is not the same as concurrent_commands_per_node!},
     predicate => 'has_commands_per_node',
-    clearer => 'clear_commands_per_node'
+    clearer   => 'clear_commands_per_node'
 );
 
 =head2 partition
@@ -171,13 +171,14 @@ Specify the partition. Defaults to the partition that has the most nodes.
 =cut
 
 has 'partition' => (
-    is => 'rw',
-    isa => 'Str',
+    is       => 'rw',
+    isa      => 'Str',
     required => 0,
-    default => '',
-    documentation => q{Slurm partition to submit jobs to. Defaults to the partition with the most available nodes},
+    default  => '',
+    documentation =>
+        q{Slurm partition to submit jobs to. Defaults to the partition with the most available nodes},
     predicate => 'has_partition',
-    clearer => 'clear_partition'
+    clearer   => 'clear_partition'
 );
 
 =head2 nodelist
@@ -187,11 +188,12 @@ Defaults to the nodes on the defq queue
 =cut
 
 has 'nodelist' => (
-    is => 'rw',
-    isa => 'ArrayRef',
+    is       => 'rw',
+    isa      => 'ArrayRef',
     required => 0,
-    default => sub { return [] },
-    documentation => q{List of nodes to submit jobs to. Defaults to the partition with the most nodes.},
+    default  => sub { return [] },
+    documentation =>
+        q{List of nodes to submit jobs to. Defaults to the partition with the most nodes.},
 );
 
 =head2 submit_slurm
@@ -203,11 +205,26 @@ $self->submit_to_slurm(0); within your code
 =cut
 
 has 'submit_to_slurm' => (
-    is => 'rw',
-    isa => 'Bool',
-    default => 1,
+    is       => 'rw',
+    isa      => 'Bool',
+    default  => 1,
     required => 1,
-    documentation => q{Bool value whether or not to submit to slurm. If you are looking to debug your files, or this script you will want to set this to zero.},
+    documentation =>
+        q{Bool value whether or not to submit to slurm. If you are looking to debug your files, or this script you will want to set this to zero.},
+);
+
+=head2 first_pass
+
+Do a first pass of the file to get all the stats
+
+=cut
+
+has 'first_pass' => (
+    traits   => ['NoGetopt'],
+    is       => 'rw',
+    isa      => 'Bool',
+    default  => 1,
+    required => 1,
 );
 
 =head2 template_file
@@ -219,14 +236,14 @@ One is generated here for you, but you can always supply your own with --templat
 =cut
 
 has 'template_file' => (
-    is => 'rw',
-    isa => 'Str',
+    is      => 'rw',
+    isa     => 'Str',
     default => sub {
         my $self = shift;
 
-        my($fh, $filename) = tempfile();
+        my ( $fh, $filename ) = tempfile();
 
-        my $tt =<<EOF;
+        my $tt = <<EOF;
 #!/bin/bash
 #
 #SBATCH --share
@@ -259,10 +276,10 @@ EOF
         return $filename;
     },
     predicate => 'has_template_file',
-    clearer => 'clear_template_file',
-    documentation => q{Path to Slurm template file if you do not wish to use the default}
+    clearer   => 'clear_template_file',
+    documentation =>
+        q{Path to Slurm template file if you do not wish to use the default}
 );
-
 
 =head2 serial
 
@@ -272,15 +289,14 @@ The default is to use 4 procs
 =cut
 
 has serial => (
-    is        => 'rw',
+    is      => 'rw',
     isa     => 'Bool',
     default => 0,
-    documentation => q{Use this if you wish to run each job run one after another, with each job starting only after the previous has completed successfully},
+    documentation =>
+        q{Use this if you wish to run each job run one after another, with each job starting only after the previous has completed successfully},
     predicate => 'has_serial',
-    clearer => 'clear_serial'
+    clearer   => 'clear_serial'
 );
-
-
 
 =head2 user
 
@@ -289,11 +305,12 @@ user running the script. Passed to slurm for mail information
 =cut
 
 has 'user' => (
-    is => 'rw',
-    isa => 'Str',
-    default => sub { return $ENV{LOGNAME} || $ENV{USER} || getpwuid($<); },
+    is       => 'rw',
+    isa      => 'Str',
+    default  => sub { return $ENV{LOGNAME} || $ENV{USER} || getpwuid($<); },
     required => 1,
-    documentation => q{This defaults to your current user ID. This can only be changed if running as an admin user}
+    documentation =>
+        q{This defaults to your current user ID. This can only be changed if running as an admin user}
 );
 
 =head2 use_threads
@@ -305,10 +322,10 @@ If using threads your perl must be compiled to use threads!
 =cut
 
 has 'use_threads' => (
-    is => 'rw',
-    isa => 'Bool',
-    default => 0,
-    required => 0,
+    is            => 'rw',
+    isa           => 'Bool',
+    default       => 0,
+    required      => 0,
     documentation => q{Use threads to run jobs},
 );
 
@@ -319,10 +336,10 @@ Bool value to indicate whether or not to use processes. Default is uses processe
 =cut
 
 has 'use_processes' => (
-    is => 'rw',
-    isa => 'Bool',
-    default => 1,
-    required => 0,
+    is            => 'rw',
+    isa           => 'Bool',
+    default       => 1,
+    required      => 0,
     documentation => q{Use processes to run jobs},
 );
 
@@ -333,11 +350,12 @@ Bool value to indicate whether or not to use processes. Default is uses processe
 =cut
 
 has 'use_gnuparallel' => (
-    is => 'rw',
-    isa => 'Bool',
-    default => 0,
+    is       => 'rw',
+    isa      => 'Bool',
+    default  => 0,
     required => 0,
-    documentation => q{Use gnu-parallel to run jobs and manage threads. This is the best option if you do not know how many threads your application uses!}
+    documentation =>
+        q{Use gnu-parallel to run jobs and manage threads. This is the best option if you do not know how many threads your application uses!}
 );
 
 =head2 use_custom
@@ -347,10 +365,10 @@ Supply your own command instead of mcerunner/threadsrunner/etc
 =cut
 
 has 'custom_command' => (
-    is => 'rw',
-    isa => 'Str',
+    is        => 'rw',
+    isa       => 'Str',
     predicate => 'has_custom_command',
-    clearer => 'clear_custom_command',
+    clearer   => 'clear_custom_command',
 );
 
 =head1 Internal Variables
@@ -364,26 +382,26 @@ template object for writing slurm batch submission script
 =cut
 
 has 'template' => (
-    traits => ['NoGetopt'],
-    is => 'rw',
+    traits   => ['NoGetopt'],
+    is       => 'rw',
     required => 0,
-    default => sub {return Template->new(ABSOLUTE     => 1) },
+    default  => sub { return Template->new( ABSOLUTE => 1 ) },
 );
-
 
 =head2 cmd_counter
 
 keep track of the number of commands - when we get to more than commands_per_node restart so we get submit to a new node.
+This is the number of commands within a batch. Each new batch resets it.
 
 =cut
 
 has 'cmd_counter' => (
-    traits  => ['Counter', 'NoGetopt'],
-    is      => 'ro',
-    isa     => 'Num',
+    traits   => [ 'Counter', 'NoGetopt' ],
+    is       => 'ro',
+    isa      => 'Num',
     required => 1,
-    default => 0,
-    handles => {
+    default  => 0,
+    handles  => {
         inc_cmd_counter   => 'inc',
         dec_cmd_counter   => 'dec',
         reset_cmd_counter => 'reset',
@@ -397,12 +415,12 @@ Keep track of which node we are on
 =cut
 
 has 'node_counter' => (
-    traits  => ['Counter', 'NoGetopt'],
-    is      => 'ro',
-    isa     => 'Num',
+    traits   => [ 'Counter', 'NoGetopt' ],
+    is       => 'ro',
+    isa      => 'Num',
     required => 1,
-    default => 0,
-    handles => {
+    default  => 0,
+    handles  => {
         inc_node_counter   => 'inc',
         dec_node_counter   => 'dec',
         reset_node_counter => 'reset',
@@ -416,12 +434,12 @@ Keep track of how many batches we have submited to slurm
 =cut
 
 has 'batch_counter' => (
-    traits  => ['Counter', 'NoGetopt'],
-    is      => 'ro',
-    isa     => 'Num',
+    traits   => [ 'Counter', 'NoGetopt' ],
+    is       => 'ro',
+    isa      => 'Num',
     required => 1,
-    default => 1,
-    handles => {
+    default  => 1,
+    handles  => {
         inc_batch_counter   => 'inc',
         dec_batch_counter   => 'dec',
         reset_batch_counter => 'reset',
@@ -435,10 +453,10 @@ Node we are running on
 =cut
 
 has 'node' => (
-    traits => ['NoGetopt'],
-    is => 'rw',
-    isa => 'Str|Undef',
-    lazy => 1,
+    traits  => ['NoGetopt'],
+    is      => 'rw',
+    isa     => 'Str|Undef',
+    lazy    => 1,
     default => sub {
         my $self = shift;
         return $self->nodelist()->[0] if $self->nodelist;
@@ -453,15 +471,13 @@ List of commands to submit to slurm
 =cut
 
 has 'batch' => (
-    traits  => ['String', 'NoGetopt',],
-    is => 'rw',
-    isa => 'Str',
-    default => q{},
+    traits   => [ 'String', 'NoGetopt', ],
+    is       => 'rw',
+    isa      => 'Str',
+    default  => q{},
     required => 0,
-    handles => {
-        add_batch     => 'append',
-    },
-    clearer => 'clear_batch',
+    handles   => { add_batch => 'append', },
+    clearer   => 'clear_batch',
     predicate => 'has_batch',
 );
 
@@ -473,14 +489,12 @@ Is cleared at the end of each slurm submission
 =cut
 
 has 'cmdfile' => (
-    traits  => ['String', 'NoGetopt'],
-    default => q{},
-    is => 'rw',
-    isa => 'Str',
+    traits   => [ 'String', 'NoGetopt' ],
+    default  => q{},
+    is       => 'rw',
+    isa      => 'Str',
     required => 0,
-    handles => {
-        clear_cmdfile     => 'clear',
-    },
+    handles => { clear_cmdfile => 'clear', },
 );
 
 =head2 slurmfile
@@ -490,42 +504,13 @@ File generated from slurm template
 =cut
 
 has 'slurmfile' => (
-    traits  => ['String', 'NoGetopt'],
-    default => q{},
-    is => 'rw',
-    isa => 'Str',
+    traits   => [ 'String', 'NoGetopt' ],
+    default  => q{},
+    is       => 'rw',
+    isa      => 'Str',
     required => 0,
-    handles => {
-        clear_slurmfile     => 'clear',
-    },
+    handles => { clear_slurmfile => 'clear', },
 );
-
-#=head2 jobref
-
-#Array of arrays details slurmjob id. Index -1 is the most recent job submissisions, and there will be an index -2 if there are any job dependencies
-
-#=cut
-
-#has 'jobref' => (
-    #traits  => ['NoGetopt'],
-    #is => 'rw',
-    #isa => 'ArrayRef',
-    #default => sub { [ [] ]  },
-#);
-
-## Added this HPC::Runner base class
-#=head2 wait
-
-#Boolean value indicates any job dependencies
-
-#=cut
-
-#has 'wait' => (
-    #traits  => ['NoGetopt'],
-    #is => 'rw',
-    #isa => 'Bool',
-    #default => 0,
-#);
 
 =head2 slurm_decides
 
@@ -534,9 +519,28 @@ Do not specify a node or partition in your sbatch file. Let Slurm decide which n
 =cut
 
 has 'slurm_decides' => (
-    is => 'rw',
-    isa => 'Bool',
+    is      => 'rw',
+    isa     => 'Bool',
     default => 0,
+);
+
+=head2 job_stats
+
+HashRef of job stats - total jobs submitted, total processes, etc
+
+=cut
+
+has 'job_stats' => (
+    is      => 'rw',
+    isa     => 'HashRef',
+    default => sub {
+        my $self = shift;
+        my $href = {};
+        $href->{total_processes} = 0;
+        $href->{jobnames}        = {};
+        $href->{total_batches}   = 0;
+        $href->{batches}         = {};
+    }
 );
 
 =head1 SUBROUTINES/METHODS
@@ -553,19 +557,53 @@ Calling system module load * does not work within a screen session!
 sub run {
     my $self = shift;
 
-    $DB::single=2;
+    #We should do this in main app
+    #$self->logname('slurm_logs');
+    #$self->log( $self->init_log );
 
-    $self->logname('slurm_logs');
-    $self->log($self->init_log);
-
-    if($self->serial){
+    if ( $self->serial ) {
         $self->procs(1);
     }
 
     $self->check_files;
+
+    $self->first_pass(1);
+    $self->parse_file_slurm;
+    $self->do_stats;
+
+    $DB::single = 2;
+    $self->first_pass(0);
     $self->parse_file_slurm;
 }
 
+=head2 do_stats
+
+Do some stats on our job stats
+Foreach job name get the number of batches, and have a put that in batches->batch->job_batches
+
+=cut
+
+sub do_stats {
+    my $self = shift;
+
+    my @jobs = keys %{$self->job_stats->{jobnames}};
+
+    foreach my $batch (keys %{$self->job_stats->{batches}}){
+        my $href = $self->job_stats->{batches}->{$batch};
+        my $jobname = $href->{jobname};
+        my @job_batches = @{$self->job_stats->{jobnames}->{$jobname} };
+
+        my $index = firstidx {$_ eq $batch} @job_batches;
+        $index += 1;
+        my $lenjobs = $#job_batches + 1;
+        $self->job_stats->{batches}->{$batch}->{job_batches} = $index."/".$lenjobs;
+
+
+        $href->{total_processes} = $self->job_stats->{total_processes};
+        $href->{total_batches} = $self->job_stats->{total_batches};
+        $href->{batch_count} = $href->{batch}."/".$self->job_stats->{total_batches};
+    }
+}
 
 =head2 check_files()
 
@@ -574,21 +612,18 @@ If it doesn't exist the entire path will be created
 
 =cut
 
-sub check_files{
-    my($self) = @_;
-    my($t);
-
-    $DB::single=2;
+sub check_files {
+    my ($self) = @_;
+    my ($t);
 
     $t = $self->outdir;
     $t =~ s/\/$//g;
     $self->outdir($t);
 
     #make the outdir
-    make_path($self->outdir) if ! -d $self->outdir;
+    make_path( $self->outdir ) if !-d $self->outdir;
 
     $self->get_nodes;
-    $DB::single=2;
 }
 
 =head2 parse_file_slurm
@@ -603,95 +638,98 @@ Batch commands in groups of $self->cpus_per_task, or smaller as wait and nextnod
 
 =cut
 
-sub parse_file_slurm{
+sub parse_file_slurm {
     my $self = shift;
-    my $fh = IO::File->new( $self->infile, q{<} ) or print "Error opening file  ".$self->infile."  ".$!; # even better!
+    my $fh = IO::File->new( $self->infile, q{<} )
+        or print "Error opening file  "
+        . $self->infile . "  "
+        . $!;    # even better!
 
-    if($self->afterok){
+    $self->reset_cmd_counter;
+    $self->reset_node_counter;
+    $self->reset_batch_counter;
+    $self->jobref( [] );
+
+    if ( $self->afterok ) {
         $self->wait(1);
         $self->jobref->[0] = $self->afterok;
-        push(@{$self->jobref}, []);
+        push( @{ $self->jobref }, [] );
     }
-    $DB::single=2;
 
-    while(<$fh>){
+    while (<$fh>) {
         my $line = $_;
         next unless $line;
         next unless $line =~ m/\S/;
         $self->process_lines($line);
     }
     $self->work if $self->has_batch;
-    push(@{$self->jobref}, []) if $self->serial;
+    push( @{ $self->jobref }, [] ) if $self->serial;
+    close($fh);
 }
 
 sub process_lines {
     my $self = shift;
     my $line = shift;
 
-    #$self->check_meta($line);
-    #return if $line =~ m/^#/;
-
-    $DB::single=2;
-
     #Do a sanity check for nohup
-    if($line =~ m/^nohup/){
-        die print "You cannot submit jobs to the queue using nohup! Please remove nohup and try again.\n";
+    if ( $line =~ m/^nohup/ ) {
+        die print
+            "You cannot submit jobs to the queue using nohup! Please remove nohup and try again.\n";
     }
 
-    $DB::single=2;
-    #if( $self->cmd_counter > 0 && 0 == $self->cmd_counter % ($self->commands_per_node + 1) && $self->batch ){
-    if( $self->cmd_counter > 0 && 0 == $self->cmd_counter % ($self->commands_per_node) && $self->batch ){
+#if( $self->cmd_counter > 0 && 0 == $self->cmd_counter % ($self->commands_per_node + 1) && $self->batch ){
+    if (   $self->cmd_counter > 0
+        && 0 == $self->cmd_counter % ( $self->commands_per_node )
+        && $self->batch )
+    {
         #Run this batch and start the next
-        $DB::single=2;
         $self->work;
-        push(@{$self->jobref}, []) if $self->serial;
+        push( @{ $self->jobref }, [] ) if $self->serial;
     }
 
-    $DB::single=2;
     $self->check_meta($line);
     return if $line =~ m/^#/;
 
-    if($self->has_cmd){
+    if ( $self->has_cmd ) {
         $self->add_cmd($line);
         $self->add_batch($line);
-        if($line =~ m/\\$/){
-            $DB::single=2;
+        if ( $line =~ m/\\$/ ) {
             return;
         }
-        else{
+        else {
             $self->add_cmd("\n");
             $self->add_batch("\n");
             $self->clear_cmd;
             $self->inc_cmd_counter;
         }
     }
-    else{
+    else {
         $self->add_cmd($line);
 
-        if($line =~ m/\\$/){
+        if ( $line =~ m/\\$/ ) {
             $self->add_batch($line);
+
             #next;
             return;
         }
-        elsif( $self->match_cmd(qr/^wait$/) ){
-            #submit this batch and get the job id so the next can depend upon it
-            $DB::single=2;
+        elsif ( $self->match_cmd(qr/^wait$/) ) {
+
+          #submit this batch and get the job id so the next can depend upon it
             $self->clear_cmd;
             $self->wait(1);
             $self->work if $self->has_batch;
-            push(@{$self->jobref}, []);
+            push( @{ $self->jobref }, [] );
         }
-        elsif( $self->match_cmd(qr/^newnode$/) ){
+        elsif ( $self->match_cmd(qr/^newnode$/) ) {
             $self->clear_cmd;
             $self->work if $self->has_batch;
-            push(@{$self->jobref}, []) if $self->serial;
+            push( @{ $self->jobref }, [] ) if $self->serial;
         }
-        else{
+        else {
             #Don't want to increase command count for wait and newnode
             $self->inc_cmd_counter;
         }
-        $self->add_batch($line."\n") if $self->has_cmd;
-        $DB::single=2;
+        $self->add_batch( $line . "\n" ) if $self->has_cmd;
         $self->clear_cmd;
     }
 
@@ -711,35 +749,32 @@ echo "This is my new job with new HPC params!"
 
 =cut
 
-
-sub check_meta{
+sub check_meta {
     my $self = shift;
     my $line = shift;
-    my(@match, $t1, $t2);
+    my ( @match, $t1, $t2 );
 
     return unless $line =~ m/^#HPC/;
 
     @match = $line =~ m/HPC (\w+)=(.+)$/;
-    ($t1, $t2)  = ($match[0], $match[1]);
+    ( $t1, $t2 ) = ( $match[0], $match[1] );
 
-    $DB::single=2;
-    if(!$self->can($t1)){
+    if ( !$self->can($t1) ) {
         print "Option $t1 is an invalid option!\n";
         return;
     }
 
-    if($t1){
-        if($t1 eq "module"){
-            $self->$t1([$t2]);
+    if ($t1) {
+        if ( $t1 eq "module" ) {
+            $self->$t1( [$t2] );
         }
-        else{
+        else {
             $self->$t1($t2);
         }
     }
-    else{
+    else {
         @match = $line =~ m/HPC (\w+)$/;
-        $DB::single=2;
-        $t1 = $match[0];
+        $t1    = $match[0];
         return unless $t1;
         $t1 = "clear_$t1";
         $self->$t1;
@@ -755,23 +790,69 @@ Take care of the counters
 
 =cut
 
-sub work{
+sub work {
     my $self = shift;
-
 
     $DB::single=2;
 
-    if($self->node_counter > (scalar @{ $self->nodelist }) ){
+    $self->collect_stats if $self->first_pass;
+
+    if ( $self->node_counter > ( scalar @{ $self->nodelist } ) ) {
         $self->reset_node_counter;
     }
-    $self->node($self->nodelist()->[$self->node_counter]) if $self->nodelist;
-    $self->process_batch;
+    $self->node( $self->nodelist()->[ $self->node_counter ] )
+        if $self->nodelist;
+    $self->process_batch unless $self->first_pass;
 
     $self->inc_batch_counter;
     $self->clear_batch;
     $self->inc_node_counter;
 
     $self->reset_cmd_counter;
+}
+
+=head2 collect_stats
+
+Collect job stats
+
+=cut
+
+sub collect_stats {
+    my $self = shift;
+
+    return unless $self->first_pass;
+
+    my $counter = $self->batch_counter;
+    $counter = sprintf( "%03d", $counter );
+
+    #Get the total processes
+    my $href = $self->job_stats;
+    $href->{total_processes} += $self->cmd_counter;
+
+    #Get the command count
+    my $command_count = ($href->{total_processes} - $self->cmd_counter) + 1;
+    #Get number of commands in this batch
+    $href->{batches}->{ $counter . "_" . $self->jobname } = {
+        commands => $self->cmd_counter,
+        jobname   => $self->jobname,
+        batch     => $self->batch_counter,
+        command_count     => $command_count."-".$href->{total_processes},
+    };
+
+    my $jobhref = {};
+    $jobhref->{ $self->jobname } = [];
+
+    if ( exists $href->{jobnames}->{ $self->jobname } ) {
+        my $tarray = $href->{jobnames}->{ $self->jobname };
+        push( @{$tarray}, $counter . "_" . $self->jobname );
+    }
+    else {
+        $href->{jobnames}->{ $self->jobname }
+            = [ $counter . "_" . $self->jobname ];
+    }
+
+    $href->{total_batches} += 1;
+    $self->job_stats($href);
 }
 
 =head2 process_batch()
@@ -781,43 +862,49 @@ Write out template, submission job, and infile for parallel runner
 
 =cut
 
-sub process_batch{
+sub process_batch {
     my $self = shift;
-    my($cmdfile, $slurmfile, $slurmsubmit, $fh, $command);
+    my ( $cmdfile, $slurmfile, $slurmsubmit, $fh, $command );
 
     my $counter = $self->batch_counter;
-    $counter = sprintf ("%03d", $counter);
+    $counter = sprintf( "%03d", $counter );
 
-    #$self->cmdfile($self->outdir."/".$self->jobname."_".$self->batch_counter.".in");
-    #$self->slurmfile($self->outdir."/".$self->jobname."_".$self->batch_counter.".sh");
-    $self->cmdfile($self->outdir."/$counter"."_".$self->jobname.".in");
-    $self->slurmfile($self->outdir."/$counter"."_".$self->jobname.".sh");
+#$self->cmdfile($self->outdir."/".$self->jobname."_".$self->batch_counter.".in");
+#$self->slurmfile($self->outdir."/".$self->jobname."_".$self->batch_counter.".sh");
+    $self->cmdfile(
+        $self->outdir . "/$counter" . "_" . $self->jobname . ".in" );
+    $self->slurmfile(
+        $self->outdir . "/$counter" . "_" . $self->jobname . ".sh" );
 
-    $fh = IO::File->new( $self->cmdfile, q{>} ) or print "Error opening file  ".$self->cmdfile."  ".$!;
+    $fh = IO::File->new( $self->cmdfile, q{>} )
+        or print "Error opening file  " . $self->cmdfile . "  " . $!;
 
     print $fh $self->batch if defined $fh && defined $self->batch;
     $fh->close;
 
     my $ok;
-    if($self->wait){
-        $ok = join(":", @{$self->jobref->[-2]}) if $self->jobref->[-2];
+    if ( $self->wait ) {
+        $ok = join( ":", @{ $self->jobref->[-2] } ) if $self->jobref->[-2];
     }
 
+    $command    = $self->process_batch_command();
+    $DB::single = 2;
 
-    $command = $self->process_batch_command();
-    $DB::single=2;
-
-    $self->template->process($self->template_file,
-        { JOBNAME => $counter."_".$self->jobname,
-            USER => $self->user,
-            NODE => $self->node,
-            CPU => $self->cpus_per_task,
+    $self->template->process(
+        $self->template_file,
+        {   JOBNAME   => $counter . "_" . $self->jobname,
+            USER      => $self->user,
+            NODE      => $self->node,
+            CPU       => $self->cpus_per_task,
             PARTITION => $self->partition,
-            AFTEROK => $ok,
-            OUT => $self->logdir."/$counter"."_".$self->jobname.".log",
-            MODULE => $self->module,
-            self => $self,
-            COMMAND => $command },
+            AFTEROK   => $ok,
+            OUT       => $self->logdir
+                . "/$counter" . "_"
+                . $self->jobname . ".log",
+            MODULE  => $self->module,
+            self    => $self,
+            COMMAND => $command
+        },
         $self->slurmfile
     ) || die $self->template->error;
 
@@ -836,7 +923,7 @@ splitting this off from the main command
 #TODO Change this all to a plugin system
 
 sub process_batch_command {
-    my($self) = @_;
+    my ($self) = @_;
     my $command;
 
     #Giving outdir/jobname doesn't work unless a full file path is supplied
@@ -844,28 +931,68 @@ sub process_batch_command {
     #$self->cmdfile($self->jobname."_batch".$self->batch_counter.".in");
 
     my $counter = $self->batch_counter;
-    $counter = sprintf ("%03d", $counter);
+    $counter = sprintf( "%03d", $counter );
 
-
-    if($self->has_custom_command){
-        $command = "cd ".getcwd()."\n";
-        $command .= $self->custom_command." --procs ".$self->procs." --infile ".$self->cmdfile." --outdir ".$self->outdir." --logname $counter"."_".$self->jobname;
+    if ( $self->has_custom_command ) {
+        $command = "cd " . getcwd() . "\n";
+        $command
+            .= $self->custom_command
+            . " --procs "
+            . $self->procs
+            . " --infile "
+            . $self->cmdfile
+            . " --outdir "
+            . $self->outdir
+            . " --logname $counter" . "_"
+            . $self->jobname;
     }
-    elsif($self->use_gnuparallel){
-        $command = "cd ".getcwd()."\n";
-        $command .= "cat ".$self->cmdfile." | parallelparser.pl | parallel --joblog ".$self->outdir."/main.log --gnu -N 1 -q  gnuparallelrunner.pl --command `echo {}` --outdir ".$self->outdir." --logname $counter"."_".$self->jobname." --seq {#}"."\n";
+    elsif ( $self->use_gnuparallel ) {
+        $command = "cd " . getcwd() . "\n";
+        $command
+            .= "cat "
+            . $self->cmdfile
+            . " | parallelparser.pl | parallel --joblog "
+            . $self->outdir
+            . "/main.log --gnu -N 1 -q  gnuparallelrunner.pl --command `echo {}` --outdir "
+            . $self->outdir
+            . " --logname $counter" . "_"
+            . $self->jobname
+            . " --seq {#}" . "\n";
     }
-    elsif($self->use_threads){
-        $command = "cd ".getcwd()."\n"; #Go back to the working directory just to be safe
-        $command .= "paralellrunner.pl --procs ".$self->procs." --infile ".$self->cmdfile." --outdir ".$self->outdir." --logname $counter"."_".$self->jobname;
+    elsif ( $self->use_threads ) {
+        $command
+            = "cd "
+            . getcwd()
+            . "\n";    #Go back to the working directory just to be safe
+        $command
+            .= "paralellrunner.pl --procs "
+            . $self->procs
+            . " --infile "
+            . $self->cmdfile
+            . " --outdir "
+            . $self->outdir
+            . " --logname $counter" . "_"
+            . $self->jobname;
     }
-    elsif($self->use_processes){
-        $command = "cd ".getcwd()."\n";
-        $command .= "mcerunner.pl --procs ".$self->procs." --infile ".$self->cmdfile." --outdir ".$self->outdir." --logname $counter"."_".$self->jobname;
+    elsif ( $self->use_processes ) {
+        $command = "cd " . getcwd() . "\n";
+        $command
+            .= "mcerunner.pl --procs "
+            . $self->procs
+            . " --infile "
+            . $self->cmdfile
+            . " --outdir "
+            . $self->outdir
+            . " --logname $counter" . "_"
+            . $self->jobname;
     }
-    else{
+    else {
         die print "None of the job processes were chosen!\n";
     }
+
+
+    my $metastr = $self->create_meta_str;
+    $command .= $metastr if $metastr;
 
     my $pluginstr = $self->create_plugin_str;
     $command .= $pluginstr if $pluginstr;
@@ -873,20 +1000,37 @@ sub process_batch_command {
     return $command;
 }
 
+sub create_meta_str {
+    my $self = shift;
+
+    my $counter = $self->batch_counter;
+    $counter = sprintf( "%03d", $counter );
+    my $batchname = $counter . "_" . $self->jobname;
+
+    my $batch = $self->job_stats->{batches}->{$batchname};
+
+    my $json = JSON->new->allow_nonref;
+    my $json_text   = $json->encode( $batch );
+
+    $DB::single=2;
+    $json_text = " --metastr \'$json_text\'";
+    return $json_text;
+}
+
 sub create_plugin_str {
     my $self = shift;
 
     return unless $self->plugins;
-    my $plugins = $self->plugins;
+    my $plugins   = $self->plugins;
     my $pluginstr = "";
-    if($plugins){
-        if(ref($plugins)){
+    if ($plugins) {
+        if ( ref($plugins) ) {
             my @plugins = @{$plugins};
-            foreach my $plugin (@plugins){
+            foreach my $plugin (@plugins) {
                 $pluginstr .= " --plugins $plugin";
             }
         }
-        else{
+        else {
             $pluginstr = " --plugins $plugins";
         }
     }
@@ -895,6 +1039,7 @@ sub create_plugin_str {
 }
 
 __PACKAGE__->meta->make_immutable;
+
 #use namespace::autoclean;
 
 1;

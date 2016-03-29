@@ -1,6 +1,7 @@
 Revision history for HPC-Runner-Scheduler
 
 {{$NEXT}}
+    - Added in some things for stats of jobs
 
 0.03  2016-03-29 10:05:05 GST
     - Small changes to logging
