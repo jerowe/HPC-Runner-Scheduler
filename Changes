@@ -1,6 +1,7 @@
 Revision history for HPC-Runner-Scheduler
 
 {{$NEXT}}
+    - Small changes to logging
 
 0.02  2016-02-21 11:50:59 GST
     - Still initial release

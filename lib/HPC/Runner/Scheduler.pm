@@ -846,6 +846,7 @@ sub process_batch_command {
     my $counter = $self->batch_counter;
     $counter = sprintf ("%03d", $counter);
 
+
     if($self->has_custom_command){
         $command = "cd ".getcwd()."\n";
         $command .= $self->custom_command." --procs ".$self->procs." --infile ".$self->cmdfile." --outdir ".$self->outdir." --logname $counter"."_".$self->jobname;
@@ -866,7 +867,31 @@ sub process_batch_command {
         die print "None of the job processes were chosen!\n";
     }
 
+    my $pluginstr = $self->create_plugin_str;
+    $command .= $pluginstr if $pluginstr;
+
     return $command;
+}
+
+sub create_plugin_str {
+    my $self = shift;
+
+    return unless $self->plugins;
+    my $plugins = $self->plugins;
+    my $pluginstr = "";
+    if($plugins){
+        if(ref($plugins)){
+            my @plugins = @{$plugins};
+            foreach my $plugin (@plugins){
+                $pluginstr .= " --plugins $plugin";
+            }
+        }
+        else{
+            $pluginstr = " --plugins $plugins";
+        }
+    }
+
+    return $pluginstr;
 }
 
 __PACKAGE__->meta->make_immutable;
