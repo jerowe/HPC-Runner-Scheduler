@@ -68,6 +68,16 @@ slurm item --cpus\_per\_task defaults to 4, which is probably fine
 
 \--commands\_per\_node defaults to 8, which is probably fine
 
+## nodes\_count
+
+Number of nodes to use on a job. This is only useful for mpi jobs.
+
+PBS:
+\#PBS -l nodes=nodes\_count:ppn=16 this
+
+Slurm:
+\#SBATCH --nodes nodes\_count
+
 ## partition
 
 \#Should probably have something at some point that you can specify multiple partitions....
