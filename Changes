@@ -1,6 +1,7 @@
 Revision history for HPC-Runner-Scheduler
 
 {{$NEXT}}
+    - Added in node count variable
 
 0.04  2016-03-29 13:48:56 GST
     - Added in some things for stats of jobs
