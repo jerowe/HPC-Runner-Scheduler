@@ -162,6 +162,29 @@ has 'commands_per_node' => (
     clearer   => 'clear_commands_per_node'
 );
 
+=head2 nodes_count
+
+Number of nodes to use on a job. This is only useful for mpi jobs.
+
+PBS:
+#PBS -l nodes=nodes_count:ppn=16 this
+
+Slurm:
+#SBATCH --nodes nodes_count
+
+=cut
+
+has 'nodes_count' => (
+    is       => 'rw',
+    isa      => 'Str',
+    required => 0,
+    default  => 1,
+    documentation =>
+        q{Number of nodes requested. You should only use this if submitting parallel jobs.},
+    predicate => 'has_nodes_count',
+    clearer   => 'clear_nodes_count'
+);
+
 =head2 partition
 
 #Should probably have something at some point that you can specify multiple partitions....
