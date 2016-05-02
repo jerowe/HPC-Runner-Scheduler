@@ -17,10 +17,10 @@ requires 'MooseX::Getopt';
 requires 'MooseX::SimpleConfig';
 requires 'Symbol';
 requires 'Template';
-requires 'perl', '5.008005';
 requires "Carp::Always";
 requires "Slurp";
 requires 'MooseX::Object::Pluggable';
+requires 'HPC::Runner';
 
 # requires 'Some::Module', 'VERSION';
 
