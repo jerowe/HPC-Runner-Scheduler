@@ -1,5 +1,5 @@
 {
-   "abstract" : "Blah blah blah",
+   "abstract" : "Base Library for HPC::Runner::Slurm and HPC::Runner::PBS",
    "author" : [
       "Jillian Rowe <jillian.e.rowe@gmail.com>"
    ],
@@ -37,16 +37,46 @@
       },
       "runtime" : {
          "requires" : {
+            "Cwd" : "0",
+            "Data::Dumper" : "0",
+            "DateTime" : "0",
+            "File::Path" : "0",
+            "File::Temp" : "0",
+            "HPC::Runner" : "0",
+            "IO::File" : "0",
+            "IO::Select" : "0",
+            "IPC::Open3" : "0",
+            "JSON" : "0",
+            "List::MoreUtils" : "0",
+            "List::Util" : "0",
+            "Log::Log4perl" : "0",
+            "Moose" : "0",
+            "MooseX::SimpleConfig" : "0",
+            "Symbol" : "0",
+            "Template" : "0",
+            "namespace::autoclean" : "0",
             "perl" : "5.008005"
          }
       },
       "test" : {
          "requires" : {
-            "Test::More" : "0.96"
+            "Test::More" : "0.96",
+            "strict" : "0"
          }
       }
    },
    "release_status" : "stable",
-   "version" : "0.01"
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/jerowe/HPC-Runner-Scheduler/issues"
+      },
+      "homepage" : "https://github.com/jerowe/HPC-Runner-Scheduler",
+      "repository" : {
+         "type" : "git",
+         "url" : "https://github.com/jerowe/HPC-Runner-Scheduler.git",
+         "web" : "https://github.com/jerowe/HPC-Runner-Scheduler"
+      }
+   },
+   "version" : "0.05"
 }
 
