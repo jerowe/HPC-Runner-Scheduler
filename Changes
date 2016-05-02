@@ -1,6 +1,8 @@
 Revision history for HPC-Runner-Scheduler
 
 {{$NEXT}}
+
+0.06  2016-05-02 10:50:56 GST
     - Added deps in cpanfile
 
 0.05  2016-04-12 11:25:28 GST

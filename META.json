@@ -37,9 +37,12 @@
       },
       "runtime" : {
          "requires" : {
+            "Carp" : "0",
+            "Carp::Always" : "0",
             "Cwd" : "0",
             "Data::Dumper" : "0",
             "DateTime" : "0",
+            "DateTime::Format::Duration" : "0",
             "File::Path" : "0",
             "File::Temp" : "0",
             "HPC::Runner" : "0",
@@ -51,7 +54,12 @@
             "List::Util" : "0",
             "Log::Log4perl" : "0",
             "Moose" : "0",
+            "Moose::Util::TypeConstraints" : "0",
+            "MooseX::Getopt" : "0",
+            "MooseX::Getopt::Usage::Role::Man" : "0",
+            "MooseX::Object::Pluggable" : "0",
             "MooseX::SimpleConfig" : "0",
+            "Slurp" : "0",
             "Symbol" : "0",
             "Template" : "0",
             "namespace::autoclean" : "0",
@@ -77,6 +85,6 @@
          "web" : "https://github.com/jerowe/HPC-Runner-Scheduler"
       }
    },
-   "version" : "0.05"
+   "version" : "0.06"
 }
 
