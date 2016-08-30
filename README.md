@@ -84,6 +84,12 @@ Slurm:
 
 Specify the partition. Defaults to the partition that has the most nodes.
 
+## walltime
+
+Define PBS walltime
+
+## mem
+
 ## submit\_slurm
 
 Bool value whether or not to submit to slurm. If you are looking to debug your files, or this script you will want to set this to zero.

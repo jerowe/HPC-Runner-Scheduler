@@ -1,6 +1,8 @@
 Revision history for HPC-Runner-Scheduler
 
 {{$NEXT}}
+
+0.08  2016-08-30 20:13:27 GST
     - Added options for mem and walltime in slurm
 
 0.07  2016-08-30 17:20:17 GST
