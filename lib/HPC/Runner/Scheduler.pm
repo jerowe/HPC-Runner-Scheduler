@@ -203,6 +203,35 @@ has 'partition' => (
     clearer   => 'clear_partition'
 );
 
+=head2 walltime
+
+Define PBS walltime
+
+=cut
+
+has 'walltime' => (
+    is => 'rw',
+    isa => 'Str',
+    required => 1,
+    default => '04:00:00',
+    predicate => 'has_walltime',
+    clearer => 'clear_walltime,'
+);
+
+=head2 mem
+
+=cut
+
+has 'mem' => (
+    is => 'rw',
+    isa => 'Str|Undef',
+    predicate => 'has_mem',
+    clearer => 'clear_mem',
+    required => 0,
+    documentation => q{Supply a memory limit},
+);
+
+
 #=head2 nodelist
 
 #Defaults to the nodes on the defq queue
@@ -277,6 +306,12 @@ has 'template_file' => (
 [% END %]
 [% IF CPU %]
 #SBATCH --cpus-per-task=[% CPU %]
+[% END %]
+[% IF self.has_mem %]
+#SBATCH --mem=[% self.mem %]
+[% END %]
+[% IF self.has_walltime %]
+#SBATCH --walltime=[% self.walltime %]
 [% END %]
 [% IF AFTEROK %]
 #SBATCH --dependency=afterok:[% AFTEROK %]
