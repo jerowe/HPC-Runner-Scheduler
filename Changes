@@ -1,6 +1,7 @@
 Revision history for HPC-Runner-Scheduler
 
 {{$NEXT}}
+    - Removed nodelist, and bug fix check_hpc_meta
     - Added deps in cpanfile
 
 0.05  2016-04-12 11:25:28 GST
