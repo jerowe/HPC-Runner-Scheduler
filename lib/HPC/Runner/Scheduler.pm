@@ -15,7 +15,6 @@ use List::Util qw(shuffle);
 use List::MoreUtils qw(firstidx);
 use JSON;
 
-
 use Moose;
 use namespace::autoclean;
 extends 'HPC::Runner';
@@ -204,20 +203,20 @@ has 'partition' => (
     clearer   => 'clear_partition'
 );
 
-=head2 nodelist
+#=head2 nodelist
 
-Defaults to the nodes on the defq queue
+#Defaults to the nodes on the defq queue
 
-=cut
+#=cut
 
-has 'nodelist' => (
-    is       => 'rw',
-    isa      => 'ArrayRef',
-    required => 0,
-    default  => sub { return [] },
-    documentation =>
-        q{List of nodes to submit jobs to. Defaults to the partition with the most nodes.},
-);
+#has 'nodelist' => (
+    #is       => 'rw',
+    #isa      => 'ArrayRef',
+    #required => 0,
+    #default  => sub { return [] },
+    #documentation =>
+        #q{List of nodes to submit jobs to. Defaults to the partition with the most nodes.},
+#);
 
 =head2 submit_slurm
 
@@ -275,9 +274,6 @@ has 'template_file' => (
 #SBATCH --output=[% OUT %]
 [% IF PARTITION %]
 #SBATCH --partition=[% PARTITION %]
-[% END %]
-[% IF NODE %]
-#SBATCH --nodelist=[% NODE %]
 [% END %]
 [% IF CPU %]
 #SBATCH --cpus-per-task=[% CPU %]
@@ -469,23 +465,23 @@ has 'batch_counter' => (
     },
 );
 
-=head2 node
+#=head2 node
 
-Node we are running on
+#Node we are running on
 
-=cut
+#=cut
 
-has 'node' => (
-    traits  => ['NoGetopt'],
-    is      => 'rw',
-    isa     => 'Str|Undef',
-    lazy    => 1,
-    default => sub {
-        my $self = shift;
-        return $self->nodelist()->[0] if $self->nodelist;
-        return "";
-    }
-);
+#has 'node' => (
+    #traits  => ['NoGetopt'],
+    #is      => 'rw',
+    #isa     => 'Str|Undef',
+    #lazy    => 1,
+    #default => sub {
+        #my $self = shift;
+        #return $self->nodelist()->[0] if $self->nodelist;
+        #return "";
+    #}
+#);
 
 =head2 batch
 
@@ -554,6 +550,7 @@ HashRef of job stats - total jobs submitted, total processes, etc
 =cut
 
 has 'job_stats' => (
+    traits   => ['NoGetopt'],
     is      => 'rw',
     isa     => 'HashRef',
     default => sub {
@@ -564,6 +561,77 @@ has 'job_stats' => (
         $href->{total_batches}   = 0;
         $href->{batches}         = {};
     }
+);
+
+=head2 job_deps
+
+#HPC jobname=assembly
+#HPC job_deps=gzip,fastqc
+
+=cut
+
+has 'job_deps' => (
+    traits   => ['NoGetopt'],
+    is => 'rw',
+    isa => 'HashRef',
+    required => 0,
+    default => sub {
+        my $self = shift;
+        $self->jobname => [];
+    },
+    lazy => 1,
+);
+
+
+=head2 job_scheduler_id
+
+Job Scheduler ID running the script. Passed to slurm for mail information
+
+=cut
+
+has 'job_scheduler_id' => (
+    is => 'rw',
+    isa => 'Str|Undef',
+    default => sub { return $ENV{SBATCH_JOB_ID} || $ENV{PBS_JOBID} || undef; },
+    required => 1,
+    documentation => q{This defaults to your current Job Scheduler ID. Ignore this if running on a single node},
+    predicate => 'has_job_scheduler_id',
+    clearer => 'clear_job_scheduler_id',
+);
+
+=head2 jobname
+
+Specify a job name, and jobs will be jobname_1, jobname_2, jobname_x
+
+=cut
+
+has 'jobname' => (
+    is => 'rw',
+    isa => 'Str',
+    required => 0,
+    traits  => ['String'],
+    default => q{job},
+    default => sub { return $ENV{SBATCH_JOB_NAME} || $ENV{PBS_JOBNAME} || 'job'; },
+    predicate => 'has_jobname',
+    handles => {
+        add_jobname => 'append',
+        clear_jobname => 'clear',
+        replace_jobname => 'replace',
+    },
+    documentation => q{Specify a job name, each job will be appended with its batch order},
+);
+
+=head2 jobref
+
+Array of arrays details slurm/process/scheduler job id. Index -1 is the most recent job submissisions, and there will be an index -2 if there are any job dependencies
+
+=cut
+
+has 'jobref' => (
+    traits  => ['NoGetopt'],
+    is => 'rw',
+    isa => 'ArrayRef',
+    default => sub { [ [] ]  },
 );
 
 =head1 SUBROUTINES/METHODS
@@ -579,10 +647,6 @@ Calling system module load * does not work within a screen session!
 
 sub run {
     my $self = shift;
-
-    #We should do this in main app
-    #$self->logname('slurm_logs');
-    #$self->log( $self->init_log );
 
     if ( $self->serial ) {
         $self->procs(1);
@@ -646,7 +710,7 @@ sub check_files {
     #make the outdir
     make_path( $self->outdir ) if !-d $self->outdir;
 
-    $self->get_nodes;
+    #$self->get_nodes;
 }
 
 =head2 parse_file_slurm
@@ -710,7 +774,7 @@ sub process_lines {
         push( @{ $self->jobref }, [] ) if $self->serial;
     }
 
-    $self->check_meta($line);
+    $self->check_hpc_meta($line);
     return if $line =~ m/^#/;
 
     if ( $self->has_cmd ) {
@@ -772,7 +836,7 @@ echo "This is my new job with new HPC params!"
 
 =cut
 
-sub check_meta {
+sub check_hpc_meta {
     my $self = shift;
     my $line = shift;
     my ( @match, $t1, $t2 );
@@ -804,6 +868,15 @@ sub check_meta {
     }
 }
 
+sub check_note_meta {
+    my $self = shift;
+    my $line = shift;
+
+    return unless $line =~ m/^#NOTE/;
+
+    $self->add_batch( $line . "\n" );
+}
+
 =head2 work
 
 Get the node #may be removed but we'll try it out
@@ -820,11 +893,11 @@ sub work {
 
     $self->collect_stats if $self->first_pass;
 
-    if ( $self->node_counter > ( scalar @{ $self->nodelist } ) ) {
-        $self->reset_node_counter;
-    }
-    $self->node( $self->nodelist()->[ $self->node_counter ] )
-        if $self->nodelist;
+    #if ( $self->node_counter > ( scalar @{ $self->nodelist } ) ) {
+        #$self->reset_node_counter;
+    #}
+    #$self->node( $self->nodelist()->[ $self->node_counter ] )
+        #if $self->nodelist;
     $self->process_batch unless $self->first_pass;
 
     $self->inc_batch_counter;
@@ -917,7 +990,6 @@ sub process_batch {
         $self->template_file,
         {   JOBNAME   => $counter . "_" . $self->jobname,
             USER      => $self->user,
-            NODE      => $self->node,
             CPU       => $self->cpus_per_task,
             PARTITION => $self->partition,
             AFTEROK   => $ok,
@@ -956,8 +1028,8 @@ sub process_batch_command {
     my $counter = $self->batch_counter;
     $counter = sprintf( "%03d", $counter );
 
+    $command = "cd " . getcwd() . "\n";
     if ( $self->has_custom_command ) {
-        $command = "cd " . getcwd() . "\n";
         $command
             .= $self->custom_command
             . " --procs "
@@ -966,11 +1038,13 @@ sub process_batch_command {
             . $self->cmdfile
             . " --outdir "
             . $self->outdir
-            . " --logname $counter" . "_"
-            . $self->jobname;
+            . " --logname "
+            ."$counter" . "_"
+            . $self->jobname
+            . " --process_table "
+            . $self->process_table;
     }
     elsif ( $self->use_gnuparallel ) {
-        $command = "cd " . getcwd() . "\n";
         $command
             .= "cat "
             . $self->cmdfile
@@ -984,10 +1058,6 @@ sub process_batch_command {
     }
     elsif ( $self->use_threads ) {
         $command
-            = "cd "
-            . getcwd()
-            . "\n";    #Go back to the working directory just to be safe
-        $command
             .= "paralellrunner.pl --procs "
             . $self->procs
             . " --infile "
@@ -995,10 +1065,11 @@ sub process_batch_command {
             . " --outdir "
             . $self->outdir
             . " --logname $counter" . "_"
-            . $self->jobname;
+            . $self->jobname
+            . " --process_table "
+            . $self->process_table;
     }
     elsif ( $self->use_processes ) {
-        $command = "cd " . getcwd() . "\n";
         $command
             .= "mcerunner.pl --procs "
             . $self->procs
@@ -1007,6 +1078,8 @@ sub process_batch_command {
             . " --outdir "
             . $self->outdir
             . " --logname $counter" . "_"
+            . " --process_table "
+            . $self->process_table
             . $self->jobname;
     }
     else {

@@ -84,10 +84,6 @@ Slurm:
 
 Specify the partition. Defaults to the partition that has the most nodes.
 
-## nodelist
-
-Defaults to the nodes on the defq queue
-
 ## submit\_slurm
 
 Bool value whether or not to submit to slurm. If you are looking to debug your files, or this script you will want to set this to zero.
@@ -152,10 +148,6 @@ Keep track of which node we are on
 
 Keep track of how many batches we have submited to slurm
 
-## node
-
-Node we are running on
-
 ## batch
 
 List of commands to submit to slurm
@@ -176,6 +168,23 @@ Do not specify a node or partition in your sbatch file. Let Slurm decide which n
 ## job\_stats
 
 HashRef of job stats - total jobs submitted, total processes, etc
+
+## job\_deps
+
+\#HPC jobname=assembly
+\#HPC job\_deps=gzip,fastqc
+
+## job\_scheduler\_id
+
+Job Scheduler ID running the script. Passed to slurm for mail information
+
+## jobname
+
+Specify a job name, and jobs will be jobname\_1, jobname\_2, jobname\_x
+
+## jobref
+
+Array of arrays details slurm/process/scheduler job id. Index -1 is the most recent job submissisions, and there will be an index -2 if there are any job dependencies
 
 # SUBROUTINES/METHODS
 
@@ -238,7 +247,7 @@ splitting this off from the main command
 
 # AUTHOR
 
-Jillian Rowe &lt;jillian.e.rowe@gmail.com>
+Jillian Rowe <jillian.e.rowe@gmail.com>
 
 # COPYRIGHT
 
