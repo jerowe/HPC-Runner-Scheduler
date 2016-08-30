@@ -311,7 +311,7 @@ has 'template_file' => (
 #SBATCH --mem=[% self.mem %]
 [% END %]
 [% IF self.has_walltime %]
-#SBATCH --walltime=[% self.walltime %]
+#SBATCH --time=[% self.walltime %]
 [% END %]
 [% IF AFTEROK %]
 #SBATCH --dependency=afterok:[% AFTEROK %]
