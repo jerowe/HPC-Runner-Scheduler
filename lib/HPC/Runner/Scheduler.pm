@@ -1113,9 +1113,9 @@ sub process_batch_command {
             . " --outdir "
             . $self->outdir
             . " --logname $counter" . "_"
+            . $self->jobname
             . " --process_table "
-            . $self->process_table
-            . $self->jobname;
+            . $self->process_table;
     }
     else {
         die print "None of the job processes were chosen!\n";
