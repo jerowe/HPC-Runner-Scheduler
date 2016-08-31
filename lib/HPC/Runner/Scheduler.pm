@@ -23,7 +23,7 @@ with 'MooseX::SimpleConfig';
 # For pretty man pages!
 $ENV{TERM} = 'xterm-256color';
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 =encoding utf-8
 

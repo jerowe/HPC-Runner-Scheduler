@@ -1,6 +1,8 @@
 Revision history for HPC-Runner-Scheduler
 
 {{$NEXT}}
+
+0.09  2016-08-31 14:15:14 GST
     - Bug fix for --wall
     - Bug fix for logname in MCE
 
